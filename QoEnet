@@ -1,0 +1,92 @@
+
+#include <stdio.h>
+
+#define NUM_TREES 3
+
+typedef struct {
+    float channel_width;
+    float phy_mode;
+    float access_category;
+    float airtime_fairness;
+} Features;
+
+float tree_1(Features f) {
+
+    if (f.phy_mode <= 1.5) {
+
+        if (f.channel_width <= 40)
+            return 0.72f;
+        else
+            return 0.81f;
+
+    } else {
+
+        if (f.access_category <= 1.5)
+            return 0.87f;
+        else
+            return 0.92f;
+    }
+}
+
+float tree_2(Features f) {
+
+    if (f.airtime_fairness <= 0.5) {
+
+        if (f.channel_width <= 20)
+            return 0.68f;
+        else
+            return 0.76f;
+
+    } else {
+
+        if (f.phy_mode <= 2.0)
+            return 0.85f;
+        else
+            return 0.90f;
+    }
+}
+
+float tree_3(Features f) {
+
+    if (f.access_category <= 1.0) {
+
+        if (f.airtime_fairness <= 0.5)
+            return 0.70f;
+        else
+            return 0.79f;
+
+    } else {
+
+        if (f.channel_width <= 80)
+            return 0.88f;
+        else
+            return 0.93f;
+    }
+}
+
+float qoenet_predict(Features f) {
+
+    float sum = 0.0f;
+
+    sum += tree_1(f);
+    sum += tree_2(f);
+    sum += tree_3(f);
+
+    return sum / NUM_TREES;
+}
+
+int main() {
+
+    Features input;
+
+    input.channel_width = 80.0f;
+    input.phy_mode = 2.0f;
+    input.access_category = 1.0f;
+    input.airtime_fairness = 1.0f;
+
+    float qoe = qoenet_predict(input);
+
+    printf("Predicted QoEnet QoE: %.4f\n", qoe);
+
+    return 0;
+}
