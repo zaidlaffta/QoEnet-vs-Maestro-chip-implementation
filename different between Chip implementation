@@ -1,0 +1,16 @@
+QoEnet is easier to run on a chip because the model is just a series of simple decisions. Each prediction is basically a few `if` comparisons on WiFi features, 
+followed by averaging the outputs from several trees. That means the processor only performs very lightweight operations like comparisons and basic arithmetic. 
+There are no large matrices, no complex math functions, and no internal state to maintain. Because of this, the code is small, runs very fast, and uses very little memory. 
+This makes QoEnet a good fit for embedded firmware in networking devices.
+
+Maestro is harder to run on a chip because it is based on an LSTM neural network. 
+Every prediction requires multiple vector multiplications and nonlinear functions such as sigmoid and tanh. 
+The model also needs to maintain hidden and cell states across time. These operations require more CPU power, more memory, and more complex code. 
+It can still run on a chip, but it typically needs a stronger processor and more optimization.
+
+In practice, QoEnet can run comfortably on many embedded processors used in networking equipment. 
+Examples include ARM Cortex-M microcontrollers such as STM32F7 or STM32H7, ESP32 chips, or embedded CPUs inside WiFi access point SoCs from vendors like Qualcomm IPQ or Broadcom. 
+Maestro can run on larger embedded processors such as ARM Cortex-A based chips, Raspberry Pi class devices, Qualcomm networking SoCs, or MediaTek router processors which is all bigger chips and his 
+arger footpring on the cirucit in general. These platforms provide the extra compute and memory needed for neural network inference. 
+
+In short, QoEnet fits naturally into small embedded systems, while Maestro usually requires a stronger embedded CPU to run efficiently.
