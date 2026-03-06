@@ -1,0 +1,159 @@
+#include <stdio.h>
+#include <math.h>
+#include <string.h>
+
+#define INPUT_SIZE 4
+#define HIDDEN_SIZE 8
+#define OUTPUT_SIZE 1
+
+typedef struct {
+    float Wi[HIDDEN_SIZE][INPUT_SIZE];
+    float Ui[HIDDEN_SIZE][HIDDEN_SIZE];
+    float bi[HIDDEN_SIZE];
+
+    float Wf[HIDDEN_SIZE][INPUT_SIZE];
+    float Uf[HIDDEN_SIZE][HIDDEN_SIZE];
+    float bf[HIDDEN_SIZE];
+
+    float Wo[HIDDEN_SIZE][INPUT_SIZE];
+    float Uo[HIDDEN_SIZE][HIDDEN_SIZE];
+    float bo[HIDDEN_SIZE];
+
+    float Wg[HIDDEN_SIZE][INPUT_SIZE];
+    float Ug[HIDDEN_SIZE][HIDDEN_SIZE];
+    float bg[HIDDEN_SIZE];
+
+    float Wy[OUTPUT_SIZE][HIDDEN_SIZE];
+    float by[OUTPUT_SIZE];
+} LSTMModel;
+
+typedef struct {
+    float h[HIDDEN_SIZE];
+    float c[HIDDEN_SIZE];
+} LSTMState;
+
+static float sigmoid(float x) {
+    return 1.0f / (1.0f + expf(-x));
+}
+
+static float dot_input(const float w[INPUT_SIZE], const float x[INPUT_SIZE]) {
+    float sum = 0.0f;
+    for (int i = 0; i < INPUT_SIZE; i++) {
+        sum += w[i] * x[i];
+    }
+    return sum;
+}
+
+static float dot_hidden(const float w[HIDDEN_SIZE], const float h[HIDDEN_SIZE]) {
+    float sum = 0.0f;
+    for (int i = 0; i < HIDDEN_SIZE; i++) {
+        sum += w[i] * h[i];
+    }
+    return sum;
+}
+
+void lstm_init_state(LSTMState *state) {
+    memset(state->h, 0, sizeof(state->h));
+    memset(state->c, 0, sizeof(state->c));
+}
+
+void lstm_step(const LSTMModel *model, const float x[INPUT_SIZE], LSTMState *state) {
+    float i_gate[HIDDEN_SIZE];
+    float f_gate[HIDDEN_SIZE];
+    float o_gate[HIDDEN_SIZE];
+    float g_gate[HIDDEN_SIZE];
+
+    float new_h[HIDDEN_SIZE];
+    float new_c[HIDDEN_SIZE];
+
+    for (int j = 0; j < HIDDEN_SIZE; j++) {
+        float i_sum = dot_input(model->Wi[j], x) + dot_hidden(model->Ui[j], state->h) + model->bi[j];
+        float f_sum = dot_input(model->Wf[j], x) + dot_hidden(model->Uf[j], state->h) + model->bf[j];
+        float o_sum = dot_input(model->Wo[j], x) + dot_hidden(model->Uo[j], state->h) + model->bo[j];
+        float g_sum = dot_input(model->Wg[j], x) + dot_hidden(model->Ug[j], state->h) + model->bg[j];
+
+        i_gate[j] = sigmoid(i_sum);
+        f_gate[j] = sigmoid(f_sum);
+        o_gate[j] = sigmoid(o_sum);
+        g_gate[j] = tanhf(g_sum);
+
+        new_c[j] = f_gate[j] * state->c[j] + i_gate[j] * g_gate[j];
+        new_h[j] = o_gate[j] * tanhf(new_c[j]);
+    }
+
+    for (int j = 0; j < HIDDEN_SIZE; j++) {
+        state->c[j] = new_c[j];
+        state->h[j] = new_h[j];
+    }
+}
+
+float maestro_predict(const LSTMModel *model, const float sequence[][INPUT_SIZE], int seq_len) {
+    LSTMState state;
+    lstm_init_state(&state);
+
+    for (int t = 0; t < seq_len; t++) {
+        lstm_step(model, sequence[t], &state);
+    }
+
+    float y = model->by[0];
+    for (int j = 0; j < HIDDEN_SIZE; j++) {
+        y += model->Wy[0][j] * state.h[j];
+    }
+
+    return y;
+}
+
+/*
+Replace these placeholder values with your trained Maestro weights.
+This example only shows the structure.
+*/
+void init_example_model(LSTMModel *model) {
+    memset(model, 0, sizeof(LSTMModel));
+
+    for (int j = 0; j < HIDDEN_SIZE; j++) {
+        for (int i = 0; i < INPUT_SIZE; i++) {
+            model->Wi[j][i] = 0.05f;
+            model->Wf[j][i] = 0.04f;
+            model->Wo[j][i] = 0.03f;
+            model->Wg[j][i] = 0.02f;
+        }
+
+        for (int k = 0; k < HIDDEN_SIZE; k++) {
+            model->Ui[j][k] = 0.01f;
+            model->Uf[j][k] = 0.01f;
+            model->Uo[j][k] = 0.01f;
+            model->Ug[j][k] = 0.01f;
+        }
+
+        model->bi[j] = 0.1f;
+        model->bf[j] = 0.1f;
+        model->bo[j] = 0.1f;
+        model->bg[j] = 0.0f;
+    }
+
+    for (int j = 0; j < HIDDEN_SIZE; j++) {
+        model->Wy[0][j] = 0.1f;
+    }
+    model->by[0] = 0.0f;
+}
+
+int main(void) {
+    LSTMModel model;
+    init_example_model(&model);
+
+    /*
+    Example sequence with 3 timesteps.
+    Features could be:
+    [channel_width, phy_mode, access_category, airtime_fairness]
+    */
+    float sequence[3][INPUT_SIZE] = {
+        {20.0f, 1.0f, 0.0f, 1.0f},
+        {40.0f, 1.0f, 2.0f, 0.0f},
+        {80.0f, 2.0f, 1.0f, 1.0f}
+    };
+
+    float qoe = maestro_predict(&model, sequence, 3);
+    printf("Predicted Maestro QoE: %.4f\n", qoe);
+
+    return 0;
+}
